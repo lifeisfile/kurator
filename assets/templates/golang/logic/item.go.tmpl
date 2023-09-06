@@ -1,0 +1,59 @@
+package logic
+
+import (
+	"fmt"
+
+	"gl.biggo.pro/devopstrain/libs/storage"
+	"github.com/getsentry/raven-go"
+)
+
+{{range .Methods }}
+{{if .IsOutput}}
+func {{ .HandlerFuncName }}(rh *RequestHandler) (OutputResult, error) {
+	blockKey := "blockkey-{{ .HandlerFuncName }}"
+	c := CheckBlockCache(rh.UserID, blockKey, rh.CacheKey)
+	if c != "" {
+		return OutputResult{ResultType: "markdown", ResultContents: wrapFromCache(wrapMarkdownCode(c)), IsReady: true}, nil
+	}
+	//if !ready {
+	//	return OutputResult{ResultType: "processing", IsReady: ready}, nil
+	//}
+	stdout := "Someoutput"
+	UpdateBlockCache(rh.UserID, blockKey, rh.CacheKey, stdout)
+	return OutputResult{ResultType: "markdown", ResultContents: wrapMarkdownCode(stdout), IsReady: true}, nil
+}
+{{else}}
+var key{{.HandlerFuncName}} = "key{{.HandlerFuncName}}-%d"
+
+func {{ .HandlerFuncName }}(rh *RequestHandler) ({{if hasPrefix .HandlerFuncName "Status"}}StatusResult{{else}}CheckStatusResult{{end}}, error) {
+
+	{{if hasPrefix .HandlerFuncName "Status"}}
+	resultJSON, err := storage.ReadObj(fmt.Sprintf(key{{.HandlerFuncName}}, rh.UserID))
+	if err != nil {
+		return StatusResult{}, err
+	}
+	status := "not_done"
+	if string(resultJSON) == `"true"` {
+		status = "done"
+	}
+	return StatusResult{Status: status}, nil
+
+	{{ else }}
+	// CODE FOR CHECK
+	
+	status := "user_error"
+	res := CheckStatusResult{Status: status}
+	if true {
+		res.Status = "done"
+		err := storage.SaveObj(fmt.Sprintf(key{{.HandlerFuncName}}, rh.UserID), "true")
+		if err != nil {
+			 raven.CaptureError(err, nil)
+		}
+	}
+	res.Expected = "Configmap **sample-config** должен быть создан"
+	res.Current = wrapMarkdownCode("somecontents")
+	return res, nil
+	{{end}}
+}
+{{end}}
+{{end}}

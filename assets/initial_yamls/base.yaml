@@ -1,0 +1,7 @@
+courseTitle: "Your course name"
+courseIcon: https://devops.lifeisfile.com/images/kubernetes-img.png
+courseSource: https://your-course.com
+authorName: Your Name
+authorPosition: Your position
+authorPhoto:  https://i.imgur.com/bw8F7mt.png
+baseServerHandlerURL: http://your-course.com/courseHandler # This URL will be proxied by `platform` with additional fields: user_id. Not used for dev server

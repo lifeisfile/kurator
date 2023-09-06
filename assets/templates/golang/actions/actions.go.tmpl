@@ -1,0 +1,41 @@
+package actions
+
+import (
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+	"{{ .ModuleName }}/logic"
+)
+
+type ResponseEmpty struct {
+}
+
+func wrapResult(c echo.Context, status interface{}, err error) error {
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ResponseEmpty{})
+	}
+	return c.JSON(http.StatusOK, status)
+}
+
+func CourseHandler(c echo.Context) error {
+	rh := new(logic.RequestHandler)
+	if err := c.Bind(rh); err != nil {
+		return err
+	}
+
+	switch os := rh.Method; os {
+  {{range .Tasks }}
+    {{range .Methods }}
+	case "{{ .HandlerName }}":
+		status, err := logic.{{ .HandlerFuncName }}(rh)
+		return wrapResult(c, status, err)
+	
+    {{end}}
+  {{end}}
+	
+
+	}
+
+	return c.JSON(http.StatusOK, ResponseEmpty{})
+
+}

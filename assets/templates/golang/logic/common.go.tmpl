@@ -1,0 +1,75 @@
+package logic
+
+import (
+	"fmt"
+
+	"github.com/getsentry/raven-go"
+	"github.com/gomodule/redigo/redis"
+	"gl.biggo.pro/devopstrain/libs/storage"
+)
+
+type StatusResult struct {
+	Status string
+}
+type OutputResult struct {
+	ResultType     string
+	ResultContents string
+	IsReady        bool
+}
+
+type CheckStatusResult struct {
+	Status   string
+	Expected string
+	Current  string
+	ETASelf  int `json:"ETASelf,omitempty"`
+}
+
+type RequestHandler struct {
+	Method                 string `json:"method"`
+	CourseName             string `json:"courseName"`
+	TaskNumber             int    `json:"taskNumber"`
+	CacheKey               string `json:"cacheKey"`
+	KuratorCommandOutput   string `json:"kuratorCommandOutput"`   // sets based on local command execution
+	KuratorCommandExitCode int    `json:"kuratorCommandExitCode"` // sets based on local command execution
+	BoolResponse           bool              `json:"boolResponse"`
+	FilesBase64            map[string]string `json:"filesBase64"`
+	UserID                 int64  `json:"userID"`                 // sets internally
+	IsPaid                 bool   `json:"isPaid"`                 // sets internally
+}
+
+func wrapMarkdownCode(code string) string {
+	res := "```\n"
+	res += code
+	res += "```"
+	return res
+}
+
+func wrapFromCache(code string) string {
+	res := "*(Ниже ранее сохраненный результат)* \n\n"
+	res += code
+	return res
+}
+
+func CheckBlockCache(userID int64, blockName, cacheKey string) string {
+	if cacheKey == "" {
+		return ""
+	}
+	key := fmt.Sprintf("cache-%s-%s-%d", blockName, cacheKey, userID)
+	rc := storage.RedisClient()
+	s, err := redis.String(rc.Do("GET", key))
+	if err != nil {
+		if err.Error() != "redigo: nil returned" {
+			raven.CaptureError(err, nil)
+		}
+	}
+	return s
+}
+
+func UpdateBlockCache(userID int64, blockName, cacheKey, content string) {
+	if cacheKey == "" {
+		return
+	}
+	key := fmt.Sprintf("cache-%s-%s-%d", blockName, cacheKey, userID)
+	rc := storage.RedisClient()
+	rc.Do("SET", key, content)
+}
