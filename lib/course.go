@@ -122,7 +122,30 @@ func handleServerMessage(conn *websocket.Conn, message []byte, isDev bool) {
 			if len(kr.Files) != 0 {
 				content, err := ioutil.ReadFile(kr.Files[0])
 				if err == nil {
-					kresp.BoolResponse = strings.Contains(string(content), strings.TrimSpace(kr.Payload))
+					payload := strings.TrimSpace(kr.Payload)
+					if strings.Contains(payload, "&&&") {
+						var result bool = true
+						for _, tkn := range strings.Split(payload, "&&&") {
+							if !strings.Contains(string(content), strings.TrimSpace(tkn)) {
+								result = false
+								break
+							}
+						}
+						kresp.BoolResponse = result
+					} else if strings.Contains(payload, "|||") {
+						var result bool = false
+						for _, tkn := range strings.Split(payload, "|||") {
+							if strings.Contains(string(content), strings.TrimSpace(tkn)) {
+								result = true
+								break
+							}
+						}
+						kresp.BoolResponse = result
+					} else {
+
+						kresp.BoolResponse = strings.Contains(string(content), payload)
+
+					}
 					kresp.CommandOutput = string(content)
 				}
 			}
