@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/getsentry/raven-go"
 	"github.com/gomodule/redigo/redis"
@@ -72,4 +73,60 @@ func UpdateBlockCache(userID int64, blockName, cacheKey, content string) {
 	key := fmt.Sprintf("cache-%s-%s-%d", blockName, cacheKey, userID)
 	rc := storage.RedisClient()
 	rc.Do("SET", key, content)
+}
+
+func GetTextColumn(t, linePattern string, column int) string {
+	var out string
+	for _, lineStr := range strings.Split(t, "\n") {
+		if strings.Contains(lineStr, linePattern) {
+			columns := strings.Fields(lineStr)
+			if len(columns) >= column {
+				return columns[column-1]
+			}
+		}
+	}
+	return out
+}
+
+func StatusGeneral(rh *RequestHandler, path string) (StatusResult, error) {
+
+	// rand.Seed(time.Now().UnixNano())
+	// randomNumber := rand.Intn(10101010)
+
+	path = strings.Replace(path, "status_", "", -1)
+
+	resultJSON, err := storage.ReadObj(fmt.Sprintf("somekey%s", path))
+	if err != nil {
+		return StatusResult{}, err
+	}
+	status := "not_done"
+	if string(resultJSON) == `"true"` {
+		status = "done"
+	}
+	return StatusResult{Status: status}, nil
+
+}
+
+func CheckGeneral(rh *RequestHandler, path string) (CheckStatusResult, error) {
+
+	// CODE FOR CHECK
+
+	// rand.Seed(time.Now().UnixNano())
+	// randomNumber := rand.Intn(10101010)
+	path = strings.Replace(path, "check_", "", -1)
+
+	status := "user_error"
+	res := CheckStatusResult{Status: status}
+
+	res.Status = "done"
+	err := storage.SaveObj(fmt.Sprintf("somekey%s", path), "true")
+	if err != nil {
+		fmt.Println(err)
+		raven.CaptureError(err, nil)
+	}
+
+	res.Expected = "Configmap **sample-config** должен быть создан"
+	res.Current = wrapMarkdownCode("somecontents")
+	return res, nil
+
 }

@@ -131,6 +131,15 @@ func RunDevServer(c *cli.Context) error {
 	e.GET("/course/:name/:taskNumber", GetCourseTask)
 	e.POST("/baseHandler", BaseHandler)
 
+	e.POST("/save_widget_status", SaveWidgetStatus)
+	e.POST("/get_widget_status", GetWidgetStatus)
+
+	e.GET("/media/:dir/:file", func(c echo.Context) error {
+		dir := c.Param("dir")
+		file := c.Param("file")
+		return c.File(dir + "/media/" + file)
+	})
+
 	e.Logger.Fatal(e.Start(":4321"))
 	return nil
 }
@@ -210,6 +219,7 @@ func GetCourseTask(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	ti.DependsOn = []string{}
 	for n, goal := range ti.Goals {
 		for k, _ := range goal.Contents {
 			ti.Goals[n].Contents[k].KuratorRequest.Payload = ""
@@ -304,12 +314,21 @@ func BaseHandler(c echo.Context) error {
 					dataJson, _ := json.Marshal(kr)
 					result, err := SendPostRequest(targetURL+"/run_kurator_request", string(dataJson), devtoken)
 					if err != nil {
-						res := CheckStatusResult{
-							Status:   "user_error",
-							Expected: "**Kurator** должен быть запущен: `kurator course start -dev`",
-							Current:  "**Kurator** не подключен к серверу",
+						if content.SourceHandler == rh.Method {
+							res := OutputResult{
+								ResultType:     "markdown",
+								ResultContents: "```\nОшибка: **Kurator** должен быть запущен в директории с исходным кодом: `kurator course start`\n```",
+								IsReady:        true,
+							}
+							return c.JSON(http.StatusOK, res)
+						} else {
+							res := CheckStatusResult{
+								Status:   "user_error",
+								Expected: "**Kurator** должен быть запущен: `kurator course start -dev`",
+								Current:  "**Kurator** не подключен к серверу",
+							}
+							return c.JSON(http.StatusOK, res)
 						}
-						return c.JSON(http.StatusOK, res)
 					}
 					kresp := KuratorResponse{}
 					err = json.Unmarshal([]byte(result), &kresp)
@@ -367,4 +386,40 @@ func CreateCourse(c *cli.Context) error {
 	fmt.Printf("kurator dev run-server --course_name %s --handler_url http://localhost:8888/courseHandler \n\n", courseName)
 
 	return nil
+}
+
+func SaveWidgetStatus(c echo.Context) error {
+	u := new(RequestSaveWidgetStatus)
+	if err := c.Bind(u); err != nil {
+		return err
+	}
+	kv, err := NewKeyValueStore("data")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = kv.Set(fmt.Sprintf("widget-status-%s", u.ID), u.Payload)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusAccepted, nil)
+}
+
+func GetWidgetStatus(c echo.Context) error {
+	u := new(RequestSaveWidgetStatus)
+	if err := c.Bind(u); err != nil {
+		return err
+	}
+	kv, err := NewKeyValueStore("data")
+	if err != nil {
+		fmt.Println(err)
+	}
+	resultJSON, err := kv.Get(fmt.Sprintf("widget-status-%s", u.ID))
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, string(resultJSON))
 }

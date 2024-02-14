@@ -252,3 +252,40 @@ func copyFile(src, dest string) error {
 
 	return nil
 }
+
+type KeyValueStore struct {
+	dir string
+}
+
+func NewKeyValueStore(dir string) (*KeyValueStore, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	cachePath := filepath.Join(homeDir, ".config", "kurator", "cache", dir)
+	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+		err := os.MkdirAll(cachePath, 0755)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &KeyValueStore{dir: cachePath}, nil
+}
+
+func (kv *KeyValueStore) Get(key string) (string, error) {
+	data, err := ioutil.ReadFile(filepath.Join(kv.dir, key))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (kv *KeyValueStore) Set(key string, value string) error {
+	filePath := filepath.Join(kv.dir, key)
+	err := ioutil.WriteFile(filePath, []byte(value), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}

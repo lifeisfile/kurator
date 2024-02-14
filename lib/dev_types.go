@@ -46,8 +46,14 @@ type TaskInfo struct {
 			SourceHandler  string `json:"sourceHandler,omitempty" yaml:"sourceHandler,omitempty"`
 			CacheKey       string `json:"cacheKey,omitempty" yaml:"cacheKey,omitempty"`
 			ID             string `json:"id,omitempty" yaml:"id,omitempty"`
+			Title          string `json:"title,omitempty" yaml:"title,omitempty"`
 			Text           string `json:"text,omitempty" yaml:"text,omitempty"`
 			DisableOnClick int    `json:"disableOnClick,omitempty" yaml:"disableOnClick,omitempty"`
+			AllowMultiple  bool   `json:"allowMultiple,omitempty" yaml:"allowMultiple,omitempty"`
+			Answers        []struct {
+				Text      string `json:"text,omitempty" yaml:"text,omitempty"`
+				IsCorrect bool   `json:"isCorrect,omitempty" yaml:"isCorrect,omitempty"`
+			} `json:"answers" yaml:"answers"`
 			KuratorRequest struct {
 				APIVersion string   `yaml:"apiVersion"`
 				Type       string   `yaml:"type"`
@@ -62,6 +68,7 @@ type TaskInfo struct {
 		Question string `json:"question" yaml:"question"`
 		Answer   string `json:"answer" yaml:"answer"`
 	} `json:"faqs" yaml:"faqs"`
+	RelatedCourses []string `json:"relatedCourses" yaml:"relatedCourses"`
 }
 
 type RequestHandler struct {
@@ -124,4 +131,15 @@ type CheckStatusResult struct {
 	Status   string
 	Expected string
 	Current  string
+}
+
+type OutputResult struct {
+	ResultType     string
+	ResultContents string
+	IsReady        bool
+}
+
+type RequestSaveWidgetStatus struct {
+	ID      string `json:"id"`
+	Payload string `json:"payload"`
 }

@@ -2,6 +2,7 @@ package actions
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"{{ .ModuleName }}/logic"
@@ -32,7 +33,16 @@ func CourseHandler(c echo.Context) error {
 	
     {{end}}
   {{end}}
-	
+	default:
+		if strings.HasPrefix(os, "check_") {
+			status, err := logic.CheckGeneral(rh, os)
+			return wrapResult(c, status, err)
+		}
+
+		if strings.HasPrefix(os, "status_") {
+			status, err := logic.StatusGeneral(rh, os)
+			return wrapResult(c, status, err)
+		}
 
 	}
 
