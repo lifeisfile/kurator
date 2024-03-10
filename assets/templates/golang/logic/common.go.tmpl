@@ -95,7 +95,7 @@ func StatusGeneral(rh *RequestHandler, path string) (StatusResult, error) {
 
 	path = strings.Replace(path, "status_", "", -1)
 
-	resultJSON, err := storage.ReadObj(fmt.Sprintf("somekey%s", path))
+	resultJSON, err := storage.ReadObj(fmt.Sprintf("somekeystatus%s", path))
 	if err != nil {
 		return StatusResult{}, err
 	}
